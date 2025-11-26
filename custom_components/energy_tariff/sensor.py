@@ -79,19 +79,30 @@ class EnergyTariffSensor(SensorEntity):
             is_peak_time = False
         else:
             # Check Time Window
-            current_time = now.time()
-            start_str = self._config[CONF_PEAK_START]
-            end_str = self._config[CONF_PEAK_END]
+            try:
+                current_time = now.time()
+                start_str = self._config[CONF_PEAK_START]
+                end_str = self._config[CONF_PEAK_END]
+                
+                start_time = datetime.strptime(start_str, "%H:%M").time()
+                end_time = datetime.strptime(end_str, "%H:%M").time()
+                
+                # Check for Midnight Crossing
+                if start_time < end_time:
+                    # Normal day (e.g., 15:00 to 19:00)
+                    is_peak_time = start_time <= current_time < end_time
+                else:
+                    # Midnight crossing (e.g., 22:00 to 06:00)
+                    # Peak if time is after 22:00 OR before 06:00
+                    is_peak_time = current_time >= start_time or current_time < end_time
+                    
+                period = "peak" if is_peak_time else "off_peak"
             
-            start_time = datetime.strptime(start_str, "%H:%M").time()
-            end_time = datetime.strptime(end_str, "%H:%M").time()
-            
-            if start_time <= current_time < end_time:
-                is_peak_time = True
-                period = "peak"
-            else:
+            except (ValueError, TypeError):
+                # Fallback in case of bad data
+                _LOGGER.error("Invalid time format in Energy Tariff config")
                 is_peak_time = False
-                period = "off_peak"
+                period = "error"
 
         # Check Season
         is_summer = now.month in self._config[CONF_SUMMER_MONTHS]

@@ -21,3 +21,8 @@ CONF_HOLIDAYS_OFFPEAK = "holidays_offpeak"
 # Strategies
 STRATEGY_FIXED = "fixed"
 STRATEGY_TOU = "time_of_use"
+
+# Error Codes
+ERROR_INVALID_TIME_FORMAT = "invalid_time_format"
+ERROR_SAME_START_END = "same_start_end"
+ERROR_NEGATIVE_PRICE = "negative_price"

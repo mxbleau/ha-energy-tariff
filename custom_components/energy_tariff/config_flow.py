@@ -7,7 +7,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 import homeassistant.helpers.config_validation as cv
 
@@ -47,6 +47,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Energy Tariff."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return OptionsFlowHandler(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -117,3 +123,82 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Basic validation could go here (e.g. check time format), skipping for brevity
         final_data = {**self._data, **user_input}
         return self.async_create_entry(title=self._data["name"], data=final_data)
+
+
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options flow for Energy Tariff."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        # Merge data and options to get current settings
+        # We prioritize options over initial data
+        current_config = {**self.config_entry.data, **self.config_entry.options}
+        strategy = current_config.get(CONF_STRATEGY, STRATEGY_TOU)
+
+        if strategy == STRATEGY_FIXED:
+            schema = vol.Schema({
+                vol.Required(
+                    CONF_PRICE_FIXED, 
+                    default=current_config.get(CONF_PRICE_FIXED, 0.15)
+                ): float,
+            })
+        else:
+            # Time of Use Schema
+            month_options = {
+                1: "January", 2: "February", 3: "March", 4: "April",
+                5: "May", 6: "June", 7: "July", 8: "August",
+                9: "September", 10: "October", 11: "November", 12: "December"
+            }
+            
+            schema = vol.Schema({
+                vol.Required(
+                    CONF_PEAK_START, 
+                    default=current_config.get(CONF_PEAK_START, "15:00")
+                ): str,
+                vol.Required(
+                    CONF_PEAK_END, 
+                    default=current_config.get(CONF_PEAK_END, "19:00")
+                ): str,
+                
+                vol.Required(
+                    CONF_PRICE_SUMMER_PEAK, 
+                    default=current_config.get(CONF_PRICE_SUMMER_PEAK, 0.2339)
+                ): float,
+                vol.Required(
+                    CONF_PRICE_SUMMER_OFFPEAK, 
+                    default=current_config.get(CONF_PRICE_SUMMER_OFFPEAK, 0.1764)
+                ): float,
+                vol.Required(
+                    CONF_PRICE_WINTER_PEAK, 
+                    default=current_config.get(CONF_PRICE_WINTER_PEAK, 0.1912)
+                ): float,
+                vol.Required(
+                    CONF_PRICE_WINTER_OFFPEAK, 
+                    default=current_config.get(CONF_PRICE_WINTER_OFFPEAK, 0.1764)
+                ): float,
+
+                vol.Required(
+                    CONF_SUMMER_MONTHS, 
+                    default=current_config.get(CONF_SUMMER_MONTHS, [6, 7, 8, 9])
+                ): cv.multi_select(month_options),
+                
+                vol.Required(
+                    CONF_WEEKENDS_OFFPEAK, 
+                    default=current_config.get(CONF_WEEKENDS_OFFPEAK, True)
+                ): bool,
+                vol.Required(
+                    CONF_HOLIDAYS_OFFPEAK, 
+                    default=current_config.get(CONF_HOLIDAYS_OFFPEAK, True)
+                ): bool,
+            })
+
+        return self.async_show_form(step_id="init", data_schema=schema)

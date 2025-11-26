@@ -34,7 +34,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize the Energy Tariff sensor."""
-    config = config_entry.data
+    # Combine original data with any new options updates
+    config = {**config_entry.data, **config_entry.options}
     name = config.get("name", "Energy Tariff")
     
     entity = EnergyTariffSensor(name, config)

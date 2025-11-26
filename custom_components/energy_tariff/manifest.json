@@ -1,0 +1,11 @@
+{
+  "domain": "energy_tariff",
+  "name": "Energy Tariff",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/mxbleau/ha-energy-tariff",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/mxbleau/ha-energy-tariff/issues",
+  "requirements": ["holidays==0.29"],
+  "version": "1.0.0"
+}
